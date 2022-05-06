@@ -19,15 +19,7 @@ public:
         Context() { _stack = 0; }
 
         template <typename... Tn>
-        Context(void (*func)(Tn...), Tn... an)
-        {
-            _stack = new char[STACK_SIZE];
-            getcontext(&_context);
-            _context.uc_stack.ss_sp = _stack;
-            _context.uc_stack.ss_size = STACK_SIZE;
-            _context.uc_stack.ss_flags = 0;
-            makecontext(&_context, (void (*)())func, sizeof...(an), an...);
-        }
+        Context(void (*func)(Tn...), Tn... an);
 
         ~Context();
 
@@ -44,6 +36,25 @@ public:
 public:
     static void switch_context(Context *from, Context *to);
 };
+
+template <typename... Tn>
+inline CPU::Context::Context(void (*func)(Tn...), Tn... an)
+{
+    save();
+    _stack = new char[STACK_SIZE];
+
+    if (_stack) {
+        getcontext(&_context);
+        _context.uc_stack.ss_sp = _stack;
+        _context.uc_stack.ss_size = STACK_SIZE;
+        _context.uc_stack.ss_flags = 0;
+        _context.uc_link = 0;
+    } else {
+        std::cout << "Não foi possível criar a stack";
+        exit(-1);
+    }
+    makecontext(&_context, (void (*)())func, sizeof...(an), an...);
+}
 
 __END_API
 
