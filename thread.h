@@ -4,6 +4,9 @@
 #include "cpu.h"
 #include "traits.h"
 #include "debug.h"
+#include "list.h"
+#include <ctime> 
+#include <chrono>
 
 __BEGIN_API
 
@@ -11,8 +14,22 @@ class Thread
 {
 protected:
     typedef CPU::Context Context;
-
 public:
+
+    typedef Ordered_List<Thread> Ready_Queue;
+
+    // Thread State
+    enum State {
+        RUNNING,
+        READY,
+        FINISHING
+    };
+
+    /*
+     * Construtor vazio. Necessário para inicialização, mas sem importância para a execução das Threads.
+     */ 
+    Thread() { }
+
     /*
      * Cria uma Thread passando um ponteiro para a função a ser executada
      * e os parâmetros passados para a função, que podem variar.
@@ -47,36 +64,75 @@ public:
      */ 
     int id();
 
-    /*
+ /*
      * Retorna o contexto da thread.
      */
     Context* context() { return _context; }
 
     /*
+     * NOVO MÉTODO DESTE TRABALHO.
+     * Daspachante (disptacher) de threads. 
+     * Executa enquanto houverem threads do usuário.
+     * Chama o escalonador para definir a próxima tarefa a ser executada.
+     */
+    static void dispatcher(); 
+
+    /*
+     * NOVO MÉTODO DESTE TRABALHO.
+     * Realiza a inicialização da class Thread.
+     * Cria as Threads main e dispatcher.
+     */ 
+    static void init(void (*main)(void *));
+    
+
+    /*
+     * Devolve o processador para a thread dispatcher que irá escolher outra thread pronta
+     * para ser executada.
+     */
+    static void yield(); 
+
+    /*
+     * Destrutor de uma thread. Realiza todo os procedimentos para manter a consistência da classe.
+     */ 
+    ~Thread();
+
+    /*
      * Qualquer outro método que você achar necessário para a solução.
      */ 
-
     
+    static void print_list();
 
 private:
     int _id;
     Context * volatile _context;
     static Thread * _running;
     static int _thread_counter;
+
+    static Thread _main; 
+    static CPU::Context _main_context;
+    static Thread _dispatcher;
+    static Ready_Queue _ready;
+    Ready_Queue::Element _link;
+    volatile State _state;
+
     /*
      * Qualquer outro atributo que você achar necessário para a solução.
      */ 
-    int _increment_thread_counter();
+
 };
 
 template<typename ... Tn>
-inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) {
+inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) : /* inicialização de _link */
+    _link(this, (std::chrono::duration_cast<std::chrono::microseconds>
+        (std::chrono::high_resolution_clock::now().time_since_epoch()).count()))
+{ 
+    _id = _thread_counter++;
+    db<Thread>(TRC) << "Thread::Thread(id=" << _id << ")" << "\n";
     _context = new CPU::Context(entry, an ...);
-    /*
-     * como as threads sao criadas de maneira sequencial, 
-     * por enquanto nao ha necessidade de proteger com um mutex
-     */ 
-    _id = _increment_thread_counter();
+    _state = READY;
+    _ready.insert(&_link);
+
+    Thread::print_list();
 }
 
 __END_API
