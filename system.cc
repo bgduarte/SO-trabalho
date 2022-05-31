@@ -10,7 +10,7 @@ void System::init(void (*main) (void *)) {
     db<System>(TRC) << "System::init()" << "\n";
     setvbuf(stdout, 0, _IONBF, 0);
 
-    Thread::init(*main);
+    Thread::init(main);
 }
 
 

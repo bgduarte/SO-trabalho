@@ -98,9 +98,7 @@ public:
 
     /*
      * Qualquer outro método que você achar necessário para a solução.
-     */ 
-    
-    static void print_list();
+     */
 
 private:
     int _id;
@@ -130,9 +128,10 @@ inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) : /* inicialização de
     db<Thread>(TRC) << "Thread::Thread(id=" << _id << ")" << "\n";
     _context = new CPU::Context(entry, an ...);
     _state = READY;
-    _ready.insert(&_link);
 
-    Thread::print_list();
+    if (_id != 0 && _id != 1) {
+        _ready.insert(&_link);
+    }
 }
 
 __END_API
