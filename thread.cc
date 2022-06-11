@@ -30,7 +30,10 @@ int Thread::switch_context(Thread * prev, Thread * next) {
 
 void Thread::thread_exit(int exit_code) {
     db<Thread>(TRC) << "Thread::thread_exit(exit_code=" << exit_code << ", id=" << _id << ")\n";
+    _exit_code = exit_code;
     _state = FINISHING;
+    if (_joiner_thread)
+        _joiner_thread->resume();
     yield();
 }
 
@@ -72,13 +75,13 @@ void Thread::yield() {
     Thread* next = _ready.remove()->object();
     db<Thread>(TRC) << "Thread id="<< prev->_id << " yield()" << "\n";
 
-    if (prev != &_main && prev != &_dispatcher && prev->_state != FINISHING) {
+    if (prev != &_main && prev != &_dispatcher && prev->_state != FINISHING && prev->_state != WAITING) {
         prev->_state = READY;
         int now = std::chrono::duration_cast<std::chrono::microseconds>
             (std::chrono::high_resolution_clock::now().time_since_epoch()).count();
         prev->_link.rank(now);
     }
-    if (prev != &_main)
+    if (prev != &_main && prev->_state != WAITING)
         _ready.insert(&prev->_link);
 
     switch_context(prev, next);
@@ -89,6 +92,28 @@ Thread::~Thread() {
     Thread::_thread_counter--;
     _ready.remove(this);
     delete _context;
+}
+
+int Thread::join() {
+    db<Thread>(TRC) << "Thread " << _running->_id << " called join() on Thread "<< this->_id << "\n";
+    if (_state != FINISHING) {
+        _joiner_thread = _running;
+        _running->suspend();
+    }
+    return _exit_code;
+}
+
+void Thread::suspend() {
+    db<Thread>(TRC) << "Thread() id="<< this->_id << " suspend()\n";
+    _state = WAITING;
+    yield();
+}
+
+void Thread::resume() {
+    db<Thread>(TRC) << "Thread() id="<< this->_id << " resume()\n";
+    _state = READY;
+    _ready.insert(&_link);
+    yield();
 }
 
 __END_API

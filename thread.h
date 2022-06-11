@@ -22,6 +22,7 @@ public:
     enum State {
         RUNNING,
         READY,
+        WAITING,
         FINISHING
     };
 
@@ -100,6 +101,12 @@ public:
      * Qualquer outro método que você achar necessário para a solução.
      */
 
+    int join();
+
+    void suspend();
+
+    void resume();
+
 private:
     int _id;
     Context * volatile _context;
@@ -115,8 +122,9 @@ private:
 
     /*
      * Qualquer outro atributo que você achar necessário para a solução.
-     */ 
-
+     */
+    int _exit_code;
+    Thread * _joiner_thread;
 };
 
 template<typename ... Tn>
@@ -125,6 +133,7 @@ inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) : /* inicialização de
         (std::chrono::high_resolution_clock::now().time_since_epoch()).count()))
 { 
     _id = _thread_counter++;
+    _exit_code = -1;
     db<Thread>(TRC) << "Thread::Thread(id=" << _id << ")" << "\n";
     _context = new CPU::Context(entry, an ...);
     _state = READY;

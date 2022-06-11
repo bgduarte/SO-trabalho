@@ -22,7 +22,6 @@ CPU::Context::~Context()
 
 void CPU::switch_context(Context *from, Context *to)
 {
-
     from->save();
     to->load();
 }
