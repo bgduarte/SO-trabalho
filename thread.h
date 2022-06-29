@@ -119,6 +119,7 @@ private:
     static Ready_Queue _ready;
     Ready_Queue::Element _link;
     volatile State _state;
+    static Ordered_List<Thread> _waiting;
 
     /*
      * Qualquer outro atributo que você achar necessário para a solução.
@@ -133,6 +134,7 @@ inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) : /* inicialização de
         (std::chrono::high_resolution_clock::now().time_since_epoch()).count()))
 { 
     _id = _thread_counter++;
+    _joiner_thread = nullptr;
     _exit_code = -1;
     db<Thread>(TRC) << "Thread::Thread(id=" << _id << ")" << "\n";
     _context = new CPU::Context(entry, an ...);

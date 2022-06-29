@@ -12,6 +12,7 @@ __BEGIN_API
 
 int Thread::_thread_counter = 0;
 Ordered_List<Thread> Thread::_ready = Ready_Queue();
+Ordered_List<Thread> Thread::_waiting = Ordered_List<Thread>();
 Thread Thread::_main = Thread();
 Thread Thread::_dispatcher = Thread();
 Thread* Thread::_running = nullptr;
@@ -106,11 +107,13 @@ int Thread::join() {
 void Thread::suspend() {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " suspend()\n";
     _state = WAITING;
+    _waiting.insert(&_link);
     yield();
 }
 
 void Thread::resume() {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " resume()\n";
+    _waiting.remove(&_link);
     _state = READY;
     _ready.insert(&_link);
     yield();
