@@ -26,15 +26,21 @@ public:
         void save();
         void load();
 
+
     private:
         char *_stack;
 
     public:
         ucontext_t _context;
     };
+private:
+    static const int ONE = 1;
 
 public:
     static void switch_context(Context *from, Context *to);
+
+    static int finc(volatile int & number);
+    static int fdec(volatile int & number);
 };
 
 template <typename... Tn>

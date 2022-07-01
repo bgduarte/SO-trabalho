@@ -26,4 +26,16 @@ void CPU::switch_context(Context *from, Context *to)
     to->load();
 }
 
+
+int CPU::finc(volatile int & number) {
+    __asm__ __volatile__ ("lock xadd %1, %0;"
+        : "+m" (number)
+        : "r" (ONE));
+}
+int CPU::fdec(volatile int & number) {
+    __asm__ __volatile__ ("lock subl %1, %0;"
+        : "+m" (number)
+        : "r" (ONE));
+}
+
 __END_API

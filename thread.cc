@@ -12,7 +12,7 @@ __BEGIN_API
 
 int Thread::_thread_counter = 0;
 Ordered_List<Thread> Thread::_ready = Ready_Queue();
-Ordered_List<Thread> Thread::_waiting = Ordered_List<Thread>();
+Ordered_List<Thread> Thread::_suspended = Ordered_List<Thread>();
 Thread Thread::_main = Thread();
 Thread Thread::_dispatcher = Thread();
 Thread* Thread::_running = nullptr;
@@ -76,13 +76,13 @@ void Thread::yield() {
     Thread* next = _ready.remove()->object();
     db<Thread>(TRC) << "Thread id="<< prev->_id << " yield()" << "\n";
 
-    if (prev != &_main && prev != &_dispatcher && prev->_state != FINISHING && prev->_state != WAITING) {
+    if (prev != &_main && prev != &_dispatcher && prev->_state != FINISHING && prev->_state != SUSPENDED) {
         prev->_state = READY;
         int now = std::chrono::duration_cast<std::chrono::microseconds>
             (std::chrono::high_resolution_clock::now().time_since_epoch()).count();
         prev->_link.rank(now);
     }
-    if (prev != &_main && prev->_state != WAITING)
+    if (prev != &_main && prev->_state != SUSPENDED)
         _ready.insert(&prev->_link);
 
     switch_context(prev, next);
@@ -106,14 +106,29 @@ int Thread::join() {
 
 void Thread::suspend() {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " suspend()\n";
-    _state = WAITING;
-    _waiting.insert(&_link);
+    _state = SUSPENDED;
+    _suspended.insert(&_link);
     yield();
 }
 
 void Thread::resume() {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " resume()\n";
-    _waiting.remove(&_link);
+    _suspended.remove(&_link);
+    _state = READY;
+    _ready.insert(&_link);
+    yield();
+}
+
+void Thread::sleep() {
+    db<Thread>(TRC) << "Thread() id="<< this->_id << " sleep()\n";
+    Thread* next = _ready.remove()->object();
+    _state = WAITING;
+    switch_context(_running, next);
+}
+
+void Thread::wakeup() {
+    db<Thread>(TRC) << "Thread() id="<< this->_id << " wakeup()\n";
+
     _state = READY;
     _ready.insert(&_link);
     yield();

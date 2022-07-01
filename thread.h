@@ -22,6 +22,7 @@ public:
     enum State {
         RUNNING,
         READY,
+        SUSPENDED,
         WAITING,
         FINISHING
     };
@@ -107,6 +108,12 @@ public:
 
     void resume();
 
+    void sleep();
+
+    void wakeup();
+
+    Ready_Queue::Element* link() { return &_link; }
+
 private:
     int _id;
     Context * volatile _context;
@@ -119,7 +126,7 @@ private:
     static Ready_Queue _ready;
     Ready_Queue::Element _link;
     volatile State _state;
-    static Ordered_List<Thread> _waiting;
+    static Ordered_List<Thread> _suspended;
 
     /*
      * Qualquer outro atributo que você achar necessário para a solução.
