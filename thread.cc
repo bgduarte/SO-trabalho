@@ -91,6 +91,8 @@ void Thread::yield() {
 Thread::~Thread() {
     db<Thread>(TRC) << "~Thread() id="<< this->_id << "\n";
     Thread::_thread_counter--;
+    if (_semaphore_queue)
+        _semaphore_queue->remove(&_link);
     _ready.remove(this);
     delete _context;
 }
@@ -119,8 +121,9 @@ void Thread::resume() {
     yield();
 }
 
-void Thread::sleep() {
+void Thread::sleep(Ordered_List<Thread>* queue) {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " sleep()\n";
+    _semaphore_queue = queue;
     Thread* next = _ready.remove()->object();
     _state = WAITING;
     switch_context(_running, next);
@@ -128,7 +131,7 @@ void Thread::sleep() {
 
 void Thread::wakeup() {
     db<Thread>(TRC) << "Thread() id="<< this->_id << " wakeup()\n";
-
+    _semaphore_queue = nullptr;
     _state = READY;
     _ready.insert(&_link);
     yield();

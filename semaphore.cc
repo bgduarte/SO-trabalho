@@ -6,7 +6,10 @@
 
 __BEGIN_API
 
-Semaphore::~Semaphore() {}
+Semaphore::~Semaphore() {
+    db<Semaphore>(TRC) << "~Semaphore()\n";
+    wakeup_all();
+}
 
 void Semaphore::p() {
     db<Semaphore>(TRC) << "Semaphore p(): Thread id="<< Thread::running()->id() << " count:" << _count << "\n";
@@ -36,7 +39,7 @@ int Semaphore::fdec(volatile int & number) {
 void Semaphore::sleep() {
     db<Semaphore>(TRC) << "Semaphore sleep(): Thread id="<< Thread::running()->id() << " \n";
     _threads.insert(Thread::running()->link());
-    Thread::running()->sleep();
+    Thread::running()->sleep(&_threads);
 }
 void Semaphore::wakeup() {
     Thread* waking_thread = _threads.remove()->object();

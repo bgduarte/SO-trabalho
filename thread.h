@@ -108,7 +108,7 @@ public:
 
     void resume();
 
-    void sleep();
+    void sleep(Ordered_List<Thread>* queue);
 
     void wakeup();
 
@@ -127,6 +127,7 @@ private:
     Ready_Queue::Element _link;
     volatile State _state;
     static Ordered_List<Thread> _suspended;
+    Ordered_List<Thread>* _semaphore_queue;
 
     /*
      * Qualquer outro atributo que você achar necessário para a solução.
@@ -142,6 +143,7 @@ inline Thread::Thread(void (* entry)(Tn ...), Tn ... an) : /* inicialização de
 { 
     _id = _thread_counter++;
     _joiner_thread = nullptr;
+    _semaphore_queue = nullptr;
     _exit_code = -1;
     db<Thread>(TRC) << "Thread::Thread(id=" << _id << ")" << "\n";
     _context = new CPU::Context(entry, an ...);
